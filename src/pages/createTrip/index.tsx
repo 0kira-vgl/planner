@@ -4,14 +4,25 @@ import { InviteGuestsModal } from "./inviteGuestsModal";
 import { ConfirmTripModal } from "./confirmTripModal";
 import { DestinationAndDateStep } from "./destinationAndDateStep";
 import { InviteGuestsStep } from "./inviteGuestsStep";
+import { DateRange } from "react-day-picker";
+import { api } from "../../lib/axios";
 
 export function CreateTrip() {
+  const navigate = useNavigate();
+
   const [isGuestsInputOpen, setIsGuestsInputOpen] = useState(false);
   const [isGuestsModalOpen, setIsGuestsModalOpen] = useState(false);
   const [emailsToInvite, setEmailsToInvite] = useState(["ma11@gmail.com"]);
   const [isConfirmTripModalOpen, setIsConfirmTripModalOpen] = useState(false);
-  const navigate = useNavigate();
 
+  const [destination, setDestination] = useState("");
+  const [ownerName, setOwnerName] = useState("");
+  const [ownerEmail, setOwnerEmail] = useState("");
+  const [eventStartAndEndDates, setEventStartAndEndDates] = useState<
+    DateRange | undefined
+  >();
+
+  // modal functions
   function openGuestInput() {
     setIsGuestsInputOpen(true);
   }
@@ -36,11 +47,45 @@ export function CreateTrip() {
     setIsConfirmTripModalOpen(false);
   }
 
-  function createTrip(event: FormEvent<HTMLFormElement>) {
+  // create trip
+  async function createTrip(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    navigate("/trips/123");
+
+    // validations
+    if (!destination) {
+      return;
+    }
+
+    if (!eventStartAndEndDates?.from || !eventStartAndEndDates.to) {
+      return;
+    }
+
+    if (emailsToInvite.length === 0) {
+      return;
+    }
+
+    if (!ownerName || !ownerEmail) {
+      return;
+    }
+
+    console.log(eventStartAndEndDates.from);
+    console.log(eventStartAndEndDates.to);
+
+    const response = await api.post("/trips", {
+      destination,
+      starts_at: eventStartAndEndDates.from,
+      ends_at: eventStartAndEndDates.to,
+      emails_to_invite: emailsToInvite,
+      owner_name: ownerName,
+      owner_email: ownerEmail,
+    });
+
+    const { tripId } = response.data;
+
+    navigate(`/trips/${tripId}`);
   }
 
+  // email to invite
   function addNewEmailToInvite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -83,6 +128,9 @@ export function CreateTrip() {
             isGuestsInputOpen={isGuestsInputOpen}
             closeGuestInput={closeGuestInput}
             openGuestInput={openGuestInput}
+            setDestination={setDestination}
+            setEventStartAndEndDates={setEventStartAndEndDates}
+            eventStartAndEndDates={eventStartAndEndDates}
           />
 
           {isGuestsInputOpen && (
@@ -119,6 +167,8 @@ export function CreateTrip() {
 
       {isConfirmTripModalOpen && (
         <ConfirmTripModal
+          setOwnerName={setOwnerName}
+          setOwnerEmail={setOwnerEmail}
           closeConfirmTripModalOpen={closeConfirmTripModalOpen}
           createTrip={createTrip}
         />
